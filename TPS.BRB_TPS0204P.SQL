@@ -21,15 +21,6 @@ Cursor C_Param is
        SELECT repertoire,separateur,suffixe_dat,suffixe_log,base_script
        FROM      ADM_INT_PARAM;
 
--- Recherche max ID 
-Cursor c_ctrl is
-Select periode
-From GP_CA_Reel
-Where periode = P_PERIODE_CIBLE;
-r_ctrl c_ctrl %ROWTYPE;
-      
-
-
 WParam          C_Param%Rowtype;
 Wfile2          UTL_FILE.FILE_TYPE;
 Wfile_tst       UTL_FILE.FILE_TYPE;
@@ -85,7 +76,6 @@ vnb_lig_i       number:= 0;
 v_pos_pipe      number:= 0;
 v_num_champ     number:= 0;
 v_req_val       Varchar2(4000);
-v_socppa        Varchar2(3);
 ok              number:= 0 ; -- valeur boolean , elle false en 0 , et true en 1
 
 ERREUR          exception;
@@ -119,7 +109,6 @@ Begin
      BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');
      BRB$FILE.ADD_LINE(Wfile2,'* Intégration du fichier '||P_NUM_FIC_RECUP ||' dans table GP_CA_Reel - procédure BRB_TPS0204P     *');
      BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');  
-     --BRB$FILE.ADD_LINE(Wfile2,'Période cible  : ' || P_PERIOD_CIBLE); -- ??? 
      BRB$FILE.ADD_LINE(Wfile2,'Instance   : ' || Winstance);
      BRB$FILE.ADD_LINE(Wfile2,'Commencé à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
 
@@ -131,19 +120,7 @@ Begin
           raise erreur;
      end if;
       
-     /*
-     Open  c_ctrl;
-     Fetch c_ctrl Into r_ctrl;
-     If c_ctrl %FOUND Then
-        Close c_ctrl;
 
-
-        commit;
-        Close c_ctrl;
-     End if;
-    
-     */
-  
         
         DELETE from GP_CA_Reel
         where PERIODE = P_PERIODE_CIBLE and ORIGINE = 'USA';
@@ -153,19 +130,20 @@ Begin
     
         v_fic_fa := UTL_FILE.FOPEN(WParam.repertoire,P_NUM_FIC_RECUP,'r');
 
-        
+       UTL_FILE.GET_LINE(v_fic_fa,v_ligne_fa);
         
       
         BEGIN
-                          
             LOOP 
  <<NOT_ROW>>           
        
-                UTL_FILE.GET_LINE(v_fic_fa,v_ligne_fa);
-                vnb_lig := vnb_lig + 1; 
+                    
+                    vnb_lig := vnb_lig + 1;   
             
                 if nvl(INSTR(v_ligne_fa, trim(P_PERIODE_CIBLE), 1, 1),0) = 0 then -- si on trouve pas la periode cible sur la ligne on saute vers [not row] pour passer a la ligne suivante
-                
+                    UTL_FILE.GET_LINE(v_fic_fa,v_ligne_fa);
+                     vnb_lig := vnb_lig + 1;
+                    
                 goto NOT_ROW ;
                     
                 end if;
@@ -198,7 +176,8 @@ Begin
                                    v_valeur_champ := REPLACE(v_valeur_champ, '¿', '');  
                                    v_valeur_champ := REPLACE(v_valeur_champ, '?', '');  
                                    v_valeur_champ := REPLACE (v_valeur_champ, ' ', '');
-                                   
+                                                              
+
                                    
                              end if; 
 
@@ -213,11 +192,17 @@ Begin
                                     
                     END LOOP;
                     
+                    
+                    if ( LENGTH(v_req_val) >= 33 ) then
                     v_req_val := v_req_val || ',''' || user || ''',''' || sysdate || ''','''  || user || ''',''' || sysdate || '''';
                     v_insert_ligne := v_col_fa  || v_req_val || ')';  
-                    vnb_lig_i := vnb_lig_i + 1;
-                    execute immediate(v_insert_ligne);
-                    commit;  
+                    vnb_lig_i := vnb_lig_i + 1;  
+                    BRB$FILE.ADD_LINE(Wfile2,v_insert_ligne);       
+                      execute immediate(v_insert_ligne);
+                      commit;  
+                    
+                    end if;
+         
                     v_req_val := null;
                     v_num_champ := 0;
                 exception
