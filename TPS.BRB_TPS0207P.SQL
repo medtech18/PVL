@@ -48,11 +48,7 @@ v_col_fa        Varchar2(15000):=  'INSERT INTO TEMP_CA_GP_PREV (
                                                 QTE1,
                                                 CA1,
                                                 DEVISE,
-                                                VEHICULE,
-                                                CREATED_BY,
-                                                CREATION_DATE,
-                                                LAST_UPDATED_BY,
-                                                LAST_UPDATE_DATE                                     
+                                                VEHICULE               
                                          )VALUES (''CA_SAP'''; 
                                                                                             
                                 
@@ -137,16 +133,22 @@ Begin
                           if v_num_champ <> 35  then   
                                                       
                                if v_num_champ in  (1,2,5,30,31,23) OR ((v_num_champ >= 6   AND  v_num_champ <=20) AND v_num_champ not in (8,10,12,17)) then -- cette condition est pour limiter v_num champ en 1,2,30,31, et de 6-7 9 11 13-16 17-20
-                                
+                                        
+                                   if v_num_champ = 5 then
+                                         v_valeur_champ := to_char(to_date(TRIM(v_valeur_champ), 'dd/mm/yyyy'), 'YYYYMM');
+                                   else
+                                      if v_num_champ = 19 then
+                                         v_valeur_champ :=  SUBSTR(v_valeur_champ,1,80);
+                                      elsif v_num_champ = 20 then
+                                         v_valeur_champ :=  SUBSTR(v_valeur_champ,1,25);   
+                                      end if ;
                                       v_valeur_champ := REPLACE(v_valeur_champ, '¿', '');  
                                       v_valeur_champ := REPLACE(v_valeur_champ, '?', ''); 
                                       v_valeur_champ := REPLACE(v_valeur_champ, '''', '');   
                                       v_valeur_champ := '''' ||   TRIM(v_valeur_champ) || ''''; 
-                                      
-                                      if v_num_champ = 5 then
-                                         v_valeur_champ := to_char(to_date('17/05/2019', 'dd/mm/yyyy'), 'YYYYMM');
-                                      end if;
-                                      
+
+                                   end if;  
+                                  
                                       v_req_val := v_req_val || ',' || v_valeur_champ;
                     
                                elsif v_num_champ  IN (27,28,29) then
@@ -155,6 +157,9 @@ Begin
                                         v_valeur_champ := REPLACE(v_valeur_champ, ',', '.');  
                                         v_req_val := v_req_val || ',' || v_valeur_champ;                            
                                end if ;
+                               
+                                                                        
+
                           end if; 
                           
                                                     
@@ -163,10 +168,9 @@ Begin
                                     
                     END LOOP;
                     
-                    
+
                     if LENGTH(v_req_val) > 20 then 
                     
-                     v_req_val := v_req_val || ',''' || user || ''',''' || sysdate || ''','''  || user || ''',''' || sysdate || '''';
                      v_insert_ligne := v_col_fa  || v_req_val || ')';  
                      vnb_lig_i := vnb_lig_i + 1;
                      execute immediate(v_insert_ligne);
