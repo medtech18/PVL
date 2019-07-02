@@ -32,15 +32,14 @@ Wfile_tst       UTL_FILE.FILE_TYPE;
 Winstance       Varchar2(30);
 v_fic_fa        UTL_FILE.FILE_TYPE;
 v_col_fa        Varchar2(15000):=  'INSERT INTO ref_piece_amortie (
-                                                                                                                                        LANCEMENT,
-                                                                                                                                        REF_PIECE,
-                                                                                                                                        DATE_DEBUT ,
-                                                                                                                                        CREATED_BY,
-                                                                                                                                        CREATION_DATE,
-                                                                                                                                        LAST_UPDATED_BY,
-                                                                                                                                        LAST_UPDATE_DATE
-                                                                                                                                 )VALUES (';
-
+                                            LANCEMENT,
+                                            REF_PIECE, 
+                                            DATE_DEBUT ,
+                                            CREATED_BY,
+                                            CREATION_DATE, 
+                                             LAST_UPDATED_BY,
+                                             LAST_UPDATE_DATE 
+                                             )VALUES (';
 
 v_valeur_champ      Varchar2(250);
 v_insert            Varchar2(1);
@@ -101,7 +100,7 @@ Begin
          Fetch C_Param into WParam;
          Close C_Param;
 
-         Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tps0205P_' || P_Job || '.' || WParam.suffixe_log);
+         Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tps0205_' || P_Job || '.' || WParam.suffixe_log);
 
          BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');
          BRB$FILE.ADD_LINE(Wfile2,'* Intégration du fichier '||P_NUM_FIC_RECUP ||' dans table ref_piece_amortie - procédure BRB_TPS0205P     *');
@@ -208,11 +207,11 @@ Begin
 
                                                         v_req_val := v_req_val || ',''' || user || ''',''' || sysdate || ''','''  || user || ''',''' || sysdate || ''''; 
                                                         v_insert_ligne := v_col_fa  || v_req_val || ')'; 
-                                                           execute immediate(v_insert_ligne); 
-                                                            commit;
-
-
-                                                    vnb_lig_i := vnb_lig_i + 1;        
+                                                        
+                                                        execute immediate(v_insert_ligne); 
+                                                        commit;
+                                                           
+                                                         vnb_lig_i := vnb_lig_i + 1;        
                                                     
                                                    --- la , chaque index du tableau  lancement_tab represent un numero de lancemen , donc pour chaque numero de lancement on va mettre le nombre de ligne qui le represent
                                                     if lancement_tab.exists(v_lancement_number) then
