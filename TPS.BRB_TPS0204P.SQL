@@ -9,7 +9,6 @@ CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0204P
 Auteur   : mElasri
 Date     : 17/06/2019
 Fonction : Récuperation du contenu du fichier Transnav dans table GP_CA_Reel
-Appele par : BRB_TPS0204P
 ***************************************************************************************************/
 
 
@@ -193,7 +192,7 @@ Begin
                     END LOOP;
                     
                     
-                    if ( LENGTH(v_req_val) >= 33 ) then
+                    if ( LENGTH(v_req_val) >= 30 ) then
                     v_req_val := v_req_val || ',''' || user || ''',''' || sysdate || ''','''  || user || ''',''' || sysdate || '''';
                     v_insert_ligne := v_col_fa  || v_req_val || ')';  
                     vnb_lig_i := vnb_lig_i + 1;  
