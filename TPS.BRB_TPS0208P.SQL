@@ -1,6 +1,7 @@
 CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0208P 
  (
- P_JOB IN Number
+ P_JOB IN Number ,
+ P_PERIODE_CIBLE IN Number
   )
  IS
 
@@ -8,7 +9,7 @@ CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0208P
 Auteur   : mElasri
 Date     : 02/07/2019
 Fonction : Intégration des données de la table TEMP_CA_GP_PREV  dans table GP_CA_REEL
-Appele par : BRB_TPS0208P
+Appelé par : BRB_TPS0209P
 ***************************************************************************************************/
 
 
@@ -44,7 +45,7 @@ Cursor C_Param is
                                 VEHICULE,
                                 'SAP' ETAPE
  from  TEMP_CA_GP_PREV   , SOCDIVEXP  
- where SITE_FAB  = CODESOC (+)
+ where SITE_FAB  = CODESOC (+)  AND PERIODE =  P_PERIODE_CIBLE
 group by TYPE_FACT,
                      PERIODE,
                     CODE_CLI_PO,
@@ -113,7 +114,7 @@ BEGIN
      Fetch C_Param into WParam;
      Close C_Param;
 
-     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tpsTEST_' || P_Job || '.' || WParam.suffixe_log);
+     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tps0208_'|| P_Job || '.' || WParam.suffixe_log,'A');
 
      BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');
      BRB$FILE.ADD_LINE(Wfile2,'* Intégration des données de la table TEMP_CA_GP_PREV  dans table GP_CA_REEL - procédure BRB_TPS0208P     *');
@@ -121,6 +122,14 @@ BEGIN
      BRB$FILE.ADD_LINE(Wfile2,'Instance   : ' || Winstance);
      BRB$FILE.ADD_LINE(Wfile2,'Commencé à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
 
+    
+        DELETE from GP_CA_Reel
+        where PERIODE = P_PERIODE_CIBLE and ORIGINE = 'SAP';
+        commit;
+        
+        dbms_OUTPUT.PUT_LINE('N°  lignes Supprimées : ' || SQL%ROWCOUNT ) ;
+
+        
        OPEN  C_chiffreAFF_PREV ;
 
          
@@ -149,8 +158,8 @@ BEGIN
                                                                                                                                                         ||'''' || v_ligne.CODE_CLI_LIV  ||''''|| ','
                                                                                                                                                         ||'''' || v_ligne.NOM_CLI_LIV   ||''''|| ','
                                                                                                                                                         ||'''' || v_ligne.CODE_PROD     ||''''|| ','
-                                                                                                                                                        ||'''' || v_ligne.CODE_PROD_CLI ||''''|| ','
-                                                                                                                                                        ||'''' || v_ligne.DESG_PROD     ||''''|| ','
+                                                                                                                                                        ||'''' || SUBSTR( v_ligne.CODE_PROD_CLI,1,25)||''''|| ','
+                                                                                                                                                        ||'''' || SUBSTR( v_ligne.DESG_PROD,1,80)   ||''''|| ','
                                                                                                                                                         ||'''' || v_ligne.CODESOC             ||''''|| ','
                                                                                                                                                                   || v_ligne.PRIX_U             ||          ','
                                                                                                                                                                   || v_ligne.QTE1                   ||        ','
@@ -198,10 +207,10 @@ BEGIN
                                                                                                                                      v_ligne.CODE_CLI_LIV  ,
                                                                                                                                      v_ligne.NOM_CLI_LIV  , 
                                                                                                                                      v_ligne.CODE_PROD     ,
-                                                                                                                                      v_ligne.CODE_PROD_CLI ,
-                                                                                                                                      v_ligne.DESG_PROD   ,  
+                                                                                                                                      SUBSTR( v_ligne.CODE_PROD_CLI,1,25),
+                                                                                                                                      SUBSTR( v_ligne.DESG_PROD,1,80)  ,   
                                                                                                                                       v_ligne.CODESOC       ,
-                                                                                                                                      v_ligne.PRIX_U     ,
+                                                                                                                                      v_ligne.PRIX_U     ,     
                                                                                                                                       v_ligne.QTE1       ,
                                                                                                                                       v_ligne.CA1      ,
                                                                                                                                        v_ligne.DEVISE       , 
@@ -230,7 +239,7 @@ BEGIN
       
       
       BRB$FILE.ADD_LINE(Wfile2,'Nombre de lignes transférées : ' || vnb_lig_i);            
-      BRB$FILE.ADD_LINE(Wfile2,' Nombre de lignes NON transférées: ' ||  vnb_lig_Ni);                                    
+      BRB$FILE.ADD_LINE(Wfile2,' Nombre de lignes [ NON ] transférées: ' ||  vnb_lig_Ni);                                    
      BRB$FILE.ADD_LINE(Wfile2,'Terminé  à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
      BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
      BRB$FILE.ADD_LINE(Wfile2,'*  Fin transfert BRB_TPS0208P                                                              *');
