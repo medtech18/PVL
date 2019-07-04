@@ -1,6 +1,7 @@
 CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0207P
- (P_JOB IN Number
- ,P_NUM_FIC_RECUP IN varchar2
+ (P_JOB IN Number ,
+ P_NUM_FIC_RECUP IN varchar2 ,
+   P_OK OUT BOOLEAN
  )
  IS
 
@@ -8,7 +9,7 @@ CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0207P
 Auteur   : mElasri
 Date     : 17/06/2019
 Fonction : Récuperation du contenu du fichier ca_sap dans table TEMP_CA_GP_PREV
-Appele par : BRB_TPS0207P
+Appele par : BRB_TPS0209P
 ***************************************************************************************************/
 
 
@@ -88,7 +89,7 @@ Begin
      Fetch C_Param into WParam;
      Close C_Param;
 
-     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tpsTEST_' || P_Job || '.' || WParam.suffixe_log);
+     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tps0208_'|| P_Job || '.' || WParam.suffixe_log,'A');
 
      BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');
      BRB$FILE.ADD_LINE(Wfile2,'* Intégration du fichier '||P_NUM_FIC_RECUP ||' dans table TEMP_CA_GP_PREV - procédure BRB_TPS0207P     *');
@@ -197,21 +198,28 @@ Begin
                 BRB$FILE.ADD_LINE(Wfile2,'Femeture fichier à la ligne : ' || vnb_lig);
                   UTL_FILE.FCLOSE (v_fic_fa);
         end;
+        
+        
+        if vnb_lig_i > 0 then
+            P_OK := TRUE ;
+       else
+            P_OK := FALSE ;
+        end if;
+        
         BRB$FILE.ADD_LINE(Wfile2,'Nombre de lignes integrées : ' || vnb_lig_i);
-          
-     
-     BRB$FILE.ADD_LINE(Wfile2,'Terminé  à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
-     BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
-     BRB$FILE.ADD_LINE(Wfile2,'*  Fin transfert BRB_TPS0207P                                                              *');
-     BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
-     BRB$FILE.Close_File(Wfile2);
-     
-     Exception
+         BRB$FILE.ADD_LINE(Wfile2,'Terminé  à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
+         BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
+         BRB$FILE.ADD_LINE(Wfile2,'*  Fin transfert BRB_TPS0207P                                                              *');
+         BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
+         BRB$FILE.ADD_LINE(Wfile2,' ');
+         BRB$FILE.Close_File(Wfile2);
+         
+        Exception
         When ERREUR then
                BRB$FILE.ADD_LINE(Wfile2,v_mess_erreur);
                BRB$FILE.ADD_LINE(Wfile2,'Terminé en ERREUR  à : ' || to_char(sysdate,'DD/MM/YYYY HH24:MI:SS'));
                BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
-               BRB$FILE.ADD_LINE(Wfile2,'*  Fin transfert BRB_TPS0207P                                                              *');
+               BRB$FILE.ADD_LINE(Wfile2,'*  Fin transfert BRB_TPS0206P                                                               *');
                BRB$FILE.ADD_LINE(Wfile2,'****************************************************************************************');
                BRB$FILE.Close_File(Wfile2);
 End;
