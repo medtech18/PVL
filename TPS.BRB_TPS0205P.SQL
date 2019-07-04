@@ -10,7 +10,6 @@ CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0205P
 Auteur   : mElasri
 Date     : 17/06/2019
 Fonction : Récuperation du contenu du fichier REFERENCE_PIECE_A_REMONTER dans ref_piece_amortie
-Appele par : BRB_TPS0198P
 ***************************************************************************************************/
 
 
