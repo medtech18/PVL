@@ -8,7 +8,6 @@ CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0206P
 Auteur   : mElasri
 Date     : 17/06/2019
 Fonction : Récuperation du contenu du fichier CODE_CLIENT_A_REMONTER dans CLIENT_CODE_AMO
-Appele par : BRB_TPS0198P
 ***************************************************************************************************/
 
 
@@ -96,7 +95,7 @@ Begin
      Fetch C_Param into WParam;
      Close C_Param;
 
-     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'TPS0206_' || P_Job || '.' || WParam.suffixe_log);
+     Wfile2 := BRB$FILE.Open_File(WParam.repertoire,'tps0206_' || P_Job || '.' || WParam.suffixe_log);
 
      BRB$FILE.ADD_LINE(Wfile2,'*********************************************************************************************');
      BRB$FILE.ADD_LINE(Wfile2,'* Intégration du fichier '||P_NUM_FIC_RECUP ||' dans table CLIENT_CODE_AMO - procédure BRB_TPS0206P     *');
@@ -232,17 +231,16 @@ Begin
         end;
                 
       
-        -- dans cette boucle , il y  un tableau s'appel lancement_tab , ce tab contient des index qui represents lancement_tab , et chaque index il contient nombre de lignes qui le represent 
-                i := nvl(lancement_tab.FIRST,0);
-                BRB$FILE.ADD_LINE(Wfile2,'nombre de lignes integrées pour le lancement N° : ' || i || ' :  ' || lancement_tab(i).value);
-                            
-                WHILE i <> 0 LOOP
-                           
-                    i := nvl(lancement_tab.NEXT(i),0);  -- Get next element of array
-                    EXIT WHEN i = 0 ;
-                                     
-                    BRB$FILE.ADD_LINE(Wfile2,'nombre de lignes integrées pour le lancement N° : ' || i || ' :  ' || lancement_tab(i).value);
-                END LOOP;
+    -- dans cette boucle , il y  un tableau s'appel lancement_tab , ce tab contient des index qui represents lancement_tab , et chaque index il contient nombre de lignes qui le represent
+
+            i := nvl(lancement_tab.FIRST,0);
+
+
+            WHILE i <> 0 LOOP
+                 BRB$FILE.ADD_LINE(Wfile2,'nombre de lignes integrées pour le lancement N° : ' || i || ' :  ' || lancement_tab(i).value);
+                i := nvl(lancement_tab.NEXT(i),0);  -- Get next element of array
+                EXIT WHEN i = 0 ;
+            END LOOP;
         
                 
              BRB$FILE.ADD_LINE(Wfile2,'Nombre de lignes integrées : ' || vnb_lig_i);
