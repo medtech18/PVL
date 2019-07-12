@@ -1,11 +1,11 @@
 CREATE OR REPLACE PROCEDURE TPS.BRB_TPS0212P
 
  (P_JOB          IN Number
- ,P_AFFAIRE IN Varchar2 := ' %'
- ,P_BU            IN Varchar2 := ' %'
- ,P_CLIENT    IN Varchar2 := ' %'
- ,P_DETAIL    IN Varchar2 := ' %'
- ,P_TYPE_G  IN Varchar2 := ' %'
+ ,P_AFFAIRE IN Varchar2 
+ ,P_BU            IN Varchar2
+ ,P_CLIENT    IN Varchar2 
+ ,P_DETAIL    IN Varchar2
+ ,P_TYPE_G  IN Varchar2
  )
  IS
 
@@ -60,9 +60,9 @@ TYPE t_sample IS RECORD
 
 v_row t_sample ;
 
-Function GenerateQuery( F_DETAIL IN VARCHAR2 , F_AFFAIRE IN VARCHAR2 , F_client IN VARCHAR2 , F_BU IN VARCHAR2 , F_type_g IN VARCHAR2 ) RETURN VARCHAR2 IS
+Function GenerateQuery( F_DETAIL IN VARCHAR2 , F_AFFAIRE IN VARCHAR2 , F_BU IN VARCHAR2 , F_client   IN VARCHAR2 , F_type_g IN VARCHAR2 ) RETURN VARCHAR2 IS
+-- (P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );
 
-    v_amo_cache varchar2(10) := '';
     v_amo_cache_gby varchar2(10) := '';
 
 BEGIN
@@ -163,7 +163,7 @@ BEGIN
             and L.CLOS_FIN = ''N'')
             where affaire LIKE ''%' || F_AFFAIRE || '%'' AND client LIKE ''%' || F_client || '%'' AND bu LIKE ''%' || F_BU ||  '%''
             group by client, bu,commercial,num_chrono,designation,observation, affaire,date_histo,type_g ' || v_amo_cache_gby ||
-            '   having type_g LIKE ''%'|| F_type_g || '%''';
+            '   having       type_g      LIKE ''%'|| F_type_g || '%''';
 
 END;
 
@@ -205,7 +205,9 @@ Begin
      ecr ('##H;client;bu;commercial;affaire;designation;vente_a_amortir;nombre_mois;date_deb_amo_reel ;reste_a_amortir ;vente_amortie_apres_reneg ;reste_a_amortir_apres_reneg;observation');
      ecr('CRLF');
 
-     v_requete := GenerateQuery(TRIM( P_DETAIL),TRIM( P_AFFAIRE) , TRIM( P_CLIENT) , TRIM( P_BU  )  , TRIM(P_type_g)  );  -- DETAIL , AFFAIRE , CLIENT , BU , type_g
+     --v_requete := GenerateQuery(TRIM( P_DETAIL),TRIM( P_AFFAIRE) , TRIM( P_CLIENT) , TRIM( P_BU  )  , TRIM(P_type_g)  );  -- DETAIL , AFFAIRE , CLIENT , BU , type_g
+     
+       v_requete := GenerateQuery(P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );  -- (P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );
 
                         BEGIN
                               open c1 for  v_requete ;
