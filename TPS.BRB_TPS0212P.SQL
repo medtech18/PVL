@@ -46,6 +46,7 @@ TYPE t_sample IS RECORD
         num_chrono                  varchar2(100),
         designation                 varchar2(100),
         type_g                      varchar2(100),
+        amo_cache                   varchar2(100),
         vente_a_amortir             varchar2(100),
         quantite_prev               varchar2(100),
         qte_tot_amo                 varchar2(100),
@@ -63,13 +64,41 @@ v_row t_sample ;
 Function GenerateQuery( F_DETAIL IN VARCHAR2 , F_AFFAIRE IN VARCHAR2 , F_BU IN VARCHAR2 , F_client   IN VARCHAR2 , F_type_g IN VARCHAR2 ) RETURN VARCHAR2 IS
 -- (P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );
 
-    v_amo_cache_gby varchar2(10) := '';
+    v_columns          varchar2(700) := '';
+    v_gpby_statement varchar2(300) := '';
 
 BEGIN
 
     if TRIM(F_DETAIL) = 'O' OR TRIM(F_DETAIL) = 'o' then
-           --v_amo_cache      := 'amo_cache,';
-           v_amo_cache_gby  := ',amo_cache';
+                v_columns    := '   vente_a_amortir,
+                                    quantite_prev,
+                                    qt_tot_amo,
+                                    amorti_du_mois,
+                                    nombre_mois,
+                                    date_deb_amo_reel ,
+                                    reste_a_amortir,
+                                    vente_amortie_apres_reneg,
+                                    reste_a_amortir_apres_reneg,';
+    else
+    
+                                    
+
+                                    
+                                    
+               v_columns      := '  sum(vente_a_amortir) vente_a_amortir,
+                                    sum(quantite_prev) quantite_prev,
+                                    sum(qt_tot_amo) qt_tot_amo,
+                                    sum(amorti_du_mois) amorti_du_mois,
+                                    max(nombre_mois) nombre_mois,
+                                    min(to_char(date_deb_amo_reel,''DD/MM/YYYY'')) date_deb_amo_reel ,
+                                    sum(reste_a_amortir) reste_a_amortir,
+                                    sum(vente_amortie_apres_reneg) vente_amortie_apres_reneg,
+                                    sum(reste_a_amortir_apres_reneg) reste_a_amortir_apres_reneg,';
+                                                                         
+          v_gpby_statement := 'group by client, bu,commercial,num_chrono,designation,observation, affaire,date_histo,type_g ,amo_cache 
+                               having       type_g      LIKE ''%'|| F_type_g || '%''' ;
+    
+    
     end if ;
  return 'select to_char(date_histo,''DD/MM/YYYY'') date_histo,
     affaire,
@@ -79,17 +108,10 @@ BEGIN
     num_chrono,
     designation,
     type_g,
-    sum(vente_a_amortir) vente_a_amortir,
-    sum(quantite_prev) quantite_prev,
-    sum(qt_tot_amo) qte_tot_amo,
-    sum(amorti_du_mois) amorti_du_mois,
-    max(nombre_mois) nombre_mois,
-    min(to_char(date_deb_amo_reel,''DD/MM/YYYY'')) date_deb_amo_reel ,
-    sum(reste_a_amortir) reste_a_amortir,
-    sum(vente_amortie_apres_reneg) vente_amortie_apres_reneg,
-    sum(reste_a_amortir_apres_reneg) reste_a_amortir_apres_reneg,
-    observation
-  from
+    amo_cache ,
+    '||v_columns ||
+    'observation
+    from
             (
             SELECT
                     (select last_day(max(date_histo)) from amort_vente_rea)                                                                                             date_histo,
@@ -99,7 +121,7 @@ BEGIN
                     a.designation                                                                                                                                       designation,
                     l.commercial                                                                                                                                        commercial,
                     a.client                                                                                                                                            client,
-                    replace(a.observation,chr(10),'' '')                                                                                                                  observation,
+                    replace(a.observation,chr(10),'' '')                                                                                                                observation,
                     a.vehicule                                                                                                                                          vehicule,
                     l.amo_cache                                                                                                                                         amo_cache,
                     l.type_g                                                                                                                                            type_g,
@@ -109,14 +131,14 @@ BEGIN
                     l.id                                                                                                                                                id_lanc,
                     l.type_budget                                                                                                                                       type_budget,
                     L.EOTP                                                                                                                                              eotp,
-                    decode(l.type_g, ''FIN'', ''PPA'', l.type_g)                                                                                                             type_gestionnaire,
+                    decode(l.type_g, ''FIN'', ''PPA'', l.type_g)                                                                                                        type_gestionnaire,
                     l.gestionnaire                                                                                                                                      gestionnaire,
                     L.CALCUL_PS                                                                                                                                         calcul_ps,
                     L.PFAE_COMPTA                                                                                                                                       fae_compta,
                     L.SOP_DMS                                                                                                                                           sop,
                     l.num_chrono                                                                                                                                        num_chrono,
-                    decode(l.type_budget, ''RETROCESSION AMORTISSEMENT'', -1 * d.bdg_vente_amortie_out,d.bdg_vente_amortie_out)                                           vente_a_amortir,
-                    decode(l.type_budget, ''RETROCESSION AMORTISSEMENT'', -1 * d.bdg_vente_amort_sfi,d.bdg_vente_amort_sfi)                                               vente_amort_ssfi,
+                    decode(l.type_budget, ''RETROCESSION AMORTISSEMENT'', -1 * d.bdg_vente_amortie_out,d.bdg_vente_amortie_out)                                         vente_a_amortir,
+                    decode(l.type_budget, ''RETROCESSION AMORTISSEMENT'', -1 * d.bdg_vente_amort_sfi,d.bdg_vente_amort_sfi)                                             vente_amort_ssfi,
                     d.quantite                                                                                                                                          quantite_prev,
                     d.nombre_mois                                                                                                                                       nombre_mois,
                     round(d.bdg_vente_amortie_out / nvl(d.quantite,1),2)                                                                                                prix_piece,
@@ -161,9 +183,8 @@ BEGIN
             and l.type_budget <> ''COMPENSATION AMORTISSEMENT''
             and l.type_budget <> ''REVISION AMORTISSEMENT''
             and L.CLOS_FIN = ''N'')
-            where affaire LIKE ''%' || F_AFFAIRE || '%'' AND client LIKE ''%' || F_client || '%'' AND bu LIKE ''%' || F_BU ||  '%''
-            group by client, bu,commercial,num_chrono,designation,observation, affaire,date_histo,type_g ' || v_amo_cache_gby ||
-            '   having       type_g      LIKE ''%'|| F_type_g || '%''';
+            where affaire LIKE ''%' || F_AFFAIRE || '%'' AND client LIKE ''%' || F_client || '%'' AND bu LIKE ''%' || F_BU ||  '%''' 
+            || v_gpby_statement;
 
 END;
 
@@ -201,14 +222,16 @@ Begin
      ecr (P_AFFAIRE);
      ecr (P_CLIENT);
      ecr (P_BU);
-     ecr('CRLF');
-     ecr ('##H;client;bu;commercial;affaire;designation;vente_a_amortir;nombre_mois;date_deb_amo_reel ;reste_a_amortir ;vente_amortie_apres_reneg ;reste_a_amortir_apres_reneg;observation');
+     ecr('CRLF');   
+          
+
+     ecr ('##H;CLIENT;BU;COMMERCIAL;Num_aff°;AFFAIRE;MONTANT A AMORTIR  ; DUREE PREVUE ; DATE DEBUT REELLE  ;  RESTE A AMORTIR   ; "MONTANT A AMORTIR APRES RENEGO; RESTE A AMORTIR APRES RENEGO;OBSERVATIONS; AMO CACHé');
      ecr('CRLF');
 
      --v_requete := GenerateQuery(TRIM( P_DETAIL),TRIM( P_AFFAIRE) , TRIM( P_CLIENT) , TRIM( P_BU  )  , TRIM(P_type_g)  );  -- DETAIL , AFFAIRE , CLIENT , BU , type_g
      
        v_requete := GenerateQuery(P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );  -- (P_DETAIL ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G );
-
+        
                         BEGIN
                               open c1 for  v_requete ;
                                       loop
@@ -227,6 +250,7 @@ Begin
                                               ecr(v_row.vente_amortie_apres_reneg    );
                                               ecr(v_row.reste_a_amortir_apres_reneg  );
                                               ecr(v_row.observation                  );
+                                              ecr(v_row.amo_cache                    );
                                               ecr('CRLF');
                                       end loop;
                               close c1;
