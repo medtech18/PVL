@@ -3,7 +3,7 @@ Open FilePath For Input As #1
 row_number = 0
 
 Dim TitreFix As Variant
-TitreFix = Array("ETAT COMMERCIAL", "SITUATION AU date_hsitorique", "AFFAIRE/ OTP", "CLIENT", "BU")
+TitreFix = Array("ETAT COMMERCIAL", "SITUATION AU ", "AFFAIRE/ OTP", "CLIENT", "BU")
 
 Set wsh = Workbooks(2).Sheets.Add(After:=Sheets(1))
 
@@ -17,24 +17,28 @@ Do Until EOF(1)
         Exit Do
     End If
     
-    
+   
     Select Case Trim(LineItems(0))
     Case "##P" 'Paramteres
       
         For i = 5 To 7
+                   With wsh.Cells(i, 1)
+                        .Value = TitreFix(i - 3)
+                        .EntireColumn.AutoFit
+                        .HorizontalAlignment = xlLeft
+                        .BorderAround ColorIndex:=1
+                    End With
                     With wsh.Cells(i, 2)
                         .Value = LineItems(i - 4)
                         .EntireColumn.AutoFit
                         .HorizontalAlignment = xlCenter
                         .BorderAround ColorIndex:=1
                     End With
-                    With wsh.Cells(i, 1)
-                        .Value = TitreFix(i - 3)
-                        .EntireColumn.AutoFit
-                        .HorizontalAlignment = xlLeft
-                        .BorderAround ColorIndex:=1
-                    End With
         Next i
+
+        With wsh.Cells(3, 1)
+             .Value = .Value & LineItems(4)
+        End With
       
    Case "##H" ' Header : Les entêtes
             With wsh
@@ -82,7 +86,7 @@ Do Until EOF(1)
       
    Case "##R" ' ROW : Ligne
         For i = 1 To nLastCol
-                    With wsh.Cells(row_number + 9, i)
+                    With wsh.Cells(row_number + 10, i)
                         Align = Switch((i >= 1 And i <= 5) Or i = 100, xlLeft, True, xlCenter)
                         .Value = LineItems(i)
                         .BorderAround ColorIndex:=1
@@ -103,5 +107,6 @@ Workbooks(2).Sheets(1).Delete
 Application.DisplayAlerts = True
 
 End Sub
+
 
 
