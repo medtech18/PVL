@@ -426,11 +426,12 @@ Begin
                                   LOOP
                                        fetch c1 into v_row ;
                                            EXIT WHEN c1%NOTFOUND ;                                            
-                                                        IF PVL_STRCMP(  P_DETAIL    ,'O') = 1 THEN                                                                   
-                                                                    IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN                                                    
+                                                        IF PVL_STRCMP(  P_DETAIL    ,'O') = 1 THEN       --- AVEC DETAIL                                                            
+                                                                    IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN                        -- SI c'est une ligne d'un detail on affiche comme ligne normal                             
                                                                             ecr('##R'                              );
-                                                                    ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN
+                                                                    ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN     -- SINON SI c'est une ligne total on affiche en vert
                                                                             ecr ('##TOTAL');
+                                                                            -- ON FAIT LA SOME TOTAL DES TOTEAUX 
                                                                             v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
                                                                             v_SUM.reste_a_amortir                            :=  nvl(v_SUM.reste_a_amortir,0)   +  nvl(v_row.reste_a_amortir,0)    ;
                                                                             v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
@@ -466,22 +467,22 @@ Begin
                                                                     ecr(v_row. SURPLUS_REPORT              );        
                                                                     ecr(v_row.reste_a_amortir_apres_reneg  );                                                                                 
                                                                     ecr('CRLF');
-                                                       ELSIF PVL_STRCMP(  P_DETAIL    ,'N') = 1 THEN
-                                                                      IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN  
-                                                                                    IF    PVL_STRCMP( v_row.amo_cache,'N') = 1 THEN 
+                                                       ELSIF PVL_STRCMP(  P_DETAIL    ,'N') = 1 THEN -- SANS DETAIL
+                                                                      IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN   -- SI C'EST UNE LIGNE D'une DETAIL ON VA VERIFER D'ABORD SI IL A UN AMO CAHé NON
+                                                                                    IF    PVL_STRCMP( v_row.amo_cache,'N') = 1 THEN  -- SI IL A UN AMO CACHé NON ON SAUVEGARDE EN ROW2 SINON SI AMO CACHé OUI ON SAUVEGARDE EN ROW3
                                                                                                      IF v_row2.TYPE  IS NULL THEN 
                                                                                                         v_row2 := v_row;
                                                                                                      ELSE
-                                                                                                        v_row2.vente_a_amortir  :=  v_row2.vente_a_amortir +  v_row.vente_a_amortir ;
-                                                                                                        v_row2.reste_a_amortir    :=  v_row2.reste_a_amortir   +  v_row.reste_a_amortir    ;
-                                                                                                        v_row2.vente_amortie_apres_reneg   :=  v_row2.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
-                                                                                                        v_row2.REATRD_COMBLE  :=  v_row2.REATRD_COMBLE +  v_row.REATRD_COMBLE;
-                                                                                                        v_row2.SURPLUS_REPORT  :=  v_row2.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
-                                                                                                        v_row2.reste_a_amortir_apres_reneg :=  v_row2.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
+                                                                                                        v_row2.vente_a_amortir  :=  nvl(v_row2.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
+                                                                                                        v_row2.reste_a_amortir    :=  nvl(v_row2.reste_a_amortir,0 )  +  nvl(v_row.reste_a_amortir ,0)   ;
+                                                                                                        v_row2.vente_amortie_apres_reneg   :=  nvl(v_row2.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
+                                                                                                        v_row2.REATRD_COMBLE  :=  nvl(v_row2.REATRD_COMBLE,0) +  nvl(v_row.REATRD_COMBLE,0);
+                                                                                                        v_row2.SURPLUS_REPORT  :=  nvl(v_row2.SURPLUS_REPORT,0)+  nvl(v_row.SURPLUS_REPORT,0) ;
+                                                                                                        v_row2.reste_a_amortir_apres_reneg :=  nvl(v_row2.reste_a_amortir_apres_reneg,0) + nvl( v_row.reste_a_amortir_apres_reneg,0) ;
                                                                                                      END IF ; 
                                                                                                      
                                                                                                     v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0)                           +  nvl(v_row.vente_a_amortir,0) ;
-                                                                                                    v_SUM.reste_a_amortir                            :=  v_SUM.reste_a_amortir                             +  nvl(v_row.reste_a_amortir,0) ;
+                                                                                                    v_SUM.reste_a_amortir                            :=  nvl(v_SUM.reste_a_amortir ,0)                            +  nvl(v_row.reste_a_amortir,0) ;
                                                                                                     v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)   +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
                                                                                                     v_SUM.REATRD_COMBLE                          :=  nvl(v_SUM.REATRD_COMBLE,0)                          +  nvl(v_row.REATRD_COMBLE,0) ;
                                                                                                     v_SUM.SURPLUS_REPORT                         :=  nvl(v_SUM.SURPLUS_REPORT,0)                         +  nvl(v_row.SURPLUS_REPORT,0) ;
@@ -490,21 +491,21 @@ Begin
                                                                                                        IF v_row3.TYPE  IS NULL THEN 
                                                                                                             v_row3 := v_row;
                                                                                                        ELSE
-                                                                                                            v_row3.vente_a_amortir  :=  v_row3.vente_a_amortir +  v_row.vente_a_amortir ;
-                                                                                                            v_row3.reste_a_amortir    :=  v_row3.reste_a_amortir   +  v_row.reste_a_amortir    ;
-                                                                                                            v_row3.vente_amortie_apres_reneg   :=  v_row3.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
-                                                                                                            v_row3.REATRD_COMBLE  :=  v_row3.REATRD_COMBLE +  v_row.REATRD_COMBLE;
-                                                                                                            v_row3.SURPLUS_REPORT  :=  v_row3.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
-                                                                                                            v_row3.reste_a_amortir_apres_reneg :=  v_row3.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
+                                                                                                            v_row3.vente_a_amortir  := nvl( v_row3.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
+                                                                                                            v_row3.reste_a_amortir    :=  nvl(v_row3.reste_a_amortir,0)   +  nvl(v_row.reste_a_amortir,0)    ;
+                                                                                                            v_row3.vente_amortie_apres_reneg   :=  nvl(v_row3.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg ,0) ;
+                                                                                                            v_row3.REATRD_COMBLE  :=  nvl(v_row3.REATRD_COMBLE,0) +  nvl(v_row.REATRD_COMBLE,0) ;
+                                                                                                            v_row3.SURPLUS_REPORT  :=  nvl(v_row3.SURPLUS_REPORT,0) +  nvl(v_row.SURPLUS_REPORT,0) ;
+                                                                                                            v_row3.reste_a_amortir_apres_reneg :=  nvl(v_row3.reste_a_amortir_apres_reneg,0) +  nvl(v_row.reste_a_amortir_apres_reneg,0) ;
                                                                                                        END IF ;              
                                                                                                     v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
-                                                                                                    v_SUM.reste_a_amortir                            :=  v_SUM.reste_a_amortir   +  nvl(v_row.reste_a_amortir,0)    ;
+                                                                                                    v_SUM.reste_a_amortir                            :=  nvl(v_SUM.reste_a_amortir,0)   +  nvl(v_row.reste_a_amortir,0)    ;
                                                                                                     v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
                                                                                                     v_SUM.REATRD_COMBLE                          :=  nvl(v_SUM.REATRD_COMBLE,0) +  nvl(v_row.REATRD_COMBLE,0) ;
                                                                                                     v_SUM.SURPLUS_REPORT                         :=  nvl(v_SUM.SURPLUS_REPORT,0) +  nvl(v_row.SURPLUS_REPORT,0) ;
                                                                                                     v_SUM.reste_a_amortir_apres_reneg :=  nvl(v_SUM.reste_a_amortir_apres_reneg,0) +  nvl(v_row.reste_a_amortir_apres_reneg,0) ;                                                             
                                                                                    END IF;                                 
-                                                                      ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN    
+                                                                      ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN    -- QUAND ON ARRIVE A TOTAL ON VA VOIR SI AMO CACHé (NON) DE row2 et AMO CACHé (OUI) de ROW 3  SONT PAS NULL ON VA LES AFFICHER AVEEC TOTAL 
                                                                                     IF (v_row2.TYPE IS NOT NULL ) AND (v_row3.TYPE IS NOT NULL) THEN
                                                                                               ecr ('##R');
                                                                                               ecr(v_row2.bu                           );
@@ -548,7 +549,9 @@ Begin
                                                                                               ecr(v_row3.REATRD_COMBLE                );
                                                                                               ecr(v_row3. SURPLUS_REPORT              );        
                                                                                               ecr(v_row3.reste_a_amortir_apres_reneg  );
-                                                                                              ecr('CRLF'                              );                                                   
+                                                                                              ecr('CRLF'                              );                             
+                                                                                              
+                                                                                                                    
                                                                                               ecr ('##TOTAL'                          );
                                                                                               ecr(v_row.bu                            );
                                                                                               ecr(v_row.client                        );
@@ -571,7 +574,7 @@ Begin
                                                                                               ecr(v_row.reste_a_amortir_apres_reneg   );
                                                                                           ecr('CRLF');                                                                                                                   
                                                                                     ELSE
-                                                                                            IF v_row3.TYPE IS NOT NULL THEN 
+                                                                                            IF v_row3.TYPE IS NOT NULL THEN  -- SI AMO CACHé (NON) DE row2  EST NULL et AMO CACHé (OUI) ROW3 Nest pas NULL ON AFFICHER QUE AMO CACHé OUI SEUL SANS TOTAL
                                                                                                       ecr ('##R');
                                                                                                       ecr(v_row3.bu                           );
                                                                                                       ecr(v_row3.client                       );
@@ -595,7 +598,7 @@ Begin
                                                                                                       ecr('CRLF');  
                                                                                                 END IF ;
                                                                                                                                    
-                                                                                                IF (v_row2.TYPE IS NOT NULL )  THEN                                                  
+                                                                                                IF (v_row2.TYPE IS NOT NULL )  THEN   -- SI AMO CACHé (NON) DE row2  n'est pas NULL et AMO CACHé (OUI) ROW3 est NULL ON AFFICHER QUE AMO CACHé NON SEUL SANS TOTAL                                                 
                                                                                                           ecr ('##R');
                                                                                                           ecr(v_row2.bu                           );
                                                                                                           ecr(v_row2.client                       );
