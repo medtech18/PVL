@@ -75,9 +75,8 @@ TYPE t_sample IS RECORD
 v_row       t_sample ;
 v_row2      t_sample ;
 v_row3      t_sample ;
+v_SUM       t_sample ;
  
-v_detRow    t_sample ;
-v_totRow    t_sample ;
 
 v_dateHisto VARCHAR2(20) ;
 v_n_ligne   number := 0 ;
@@ -91,6 +90,7 @@ Function GenerateQuery( F_DETAIL IN VARCHAR2 , F_AFFAIRE IN VARCHAR2 , F_BU IN V
     v_gpby_statement        varchar2(400) := '';
     wh_typeGes              varchar2(300) :='';
 
+
 BEGIN
     if TRIM(F_DETAIL) = 'O' OR TRIM(F_DETAIL) = 'o' then
         v_columns    := ' 
@@ -101,9 +101,9 @@ BEGIN
                         amorti_du_mois,
                         nombre_mois ,
                         num_chrono,
-                        amo_cache ,
-                        to_char(date_deb_amo_reel,''DD/MM/YYYY'') date_deb_amo_reel ,
-                        reste_a_amortir,
+                        amo_cache ,'
+                         ||CASE TRIM(P_DETAIL) WHEN   'O'  THEN ' to_char(date_deb_amo_reel,''DD/MM/YYYY'') date_deb_amo_reel ,'  WHEN  'N'  THEN ' to_char(debut_amort_theo,''DD/MM/YYYY'') date_deb_amo_reel ,'  END|| 
+                        'reste_a_amortir,
                         vente_amortie_apres_reneg ,
                         REATRD_COMBLE , 
                         SURPLUS_REPORT ,
@@ -134,9 +134,9 @@ BEGIN
                                 sum(amorti_du_mois) amorti_du_mois,
                                 max(nombre_mois) nombre_mois,
                                  null  num_chrono,
-                               ''TOTAL''      amo_cache ,
-                                min(to_char(date_deb_amo_reel,''DD/MM/YYYY'')) date_deb_amo_reel ,
-                                sum(reste_a_amortir) reste_a_amortir,
+                               ''TOTAL''      amo_cache ,'
+                               ||CASE TRIM(P_DETAIL) WHEN 'O'  THEN 'min(to_char(date_deb_amo_reel,''DD/MM/YYYY'')) date_deb_amo_reel ,'   WHEN  'N'  THEN ' min(to_char(debut_amort_theo,''DD/MM/YYYY'')) date_deb_amo_reel  ,' END||   
+                                'sum(reste_a_amortir) reste_a_amortir,
                                 sum(vente_amortie_apres_reneg) vente_amortie_apres_reneg,
                                 sum(REATRD_COMBLE)      REATRD_COMBLE , 
                                 sum(SURPLUS_REPORT)     SURPLUS_REPORT ,
@@ -220,7 +220,7 @@ BEGIN
                     a.TYPE_PRODUIT ,
                     l.ID ,
                     l.num_lancement_plm  , 
-                    d.quantite Qte_prev ,
+                    QT.qte_tot Qte_prev ,
                     d.bdg_vente_amortie_out/DECODE(nvl(d.quantite,0),0,1,d.quantite) as Part_amo ,
                     L.DESIGNATION l_DESIGNATION
             from affaire a,
@@ -228,8 +228,10 @@ BEGIN
                 lancement_detail d,
                 type_budget t,
                 V_AFFAIRE_GRP_SOC_VALIDE g,
-                (select lancement, vente_amo_rea, vente_amo_nego , REATRD_COMBLE , SURPLUS_REPORT  from amort_vente_rea v
-                where v.date_histo = (select max(v1.date_histo) from amort_vente_rea v1 where v1.lancement = v.lancement)) vt,
+                (select lancement, vente_amo_rea, vente_amo_nego , REATRD_COMBLE , SURPLUS_REPORT  
+                from amort_vente_rea v
+                where v.date_histo = (select max(v1.date_histo) from amort_vente_rea v1 where v1.lancement = v.lancement)
+                ) vt,
                 (select lancement, sum(quantite) qte from amortissement_piece
                 where an_mois >= (select add_months(last_day(max(date_histo))+1,-1) from amort_vente_rea)
                 and an_mois  <= (select last_day(max(date_histo)) dernier_jour from amort_vente_rea)
@@ -306,15 +308,18 @@ Begin
      
      
 
-
-                 ecr ('##H;BU;CLIENT;COMMERCIAL;Num_aff°; OTP ;AFFAIRE;TYPE PRODUIT;VEHICULE ;ID;Num lanc;Num EOTP;Designation ;Chrono ;Type G   ;Gestionnaire ;SOP(DMS);Qte prev ; Part amo  ; AMO CACHé;MONTANT A AMORTIR ;DUREE PREVUE ; DATE DEBUT REELLE  ;  RESTE A AMORTIR   ; QUANTITE RÉALISÉ ; RETARD COMBLE ;  SURPLUS REPORT;  RESTE A AMORTIR APRES RENEGO');
-                 ecr('CRLF');
+    IF TRIM(P_DETAIL) = 'O' OR TRIM(P_DETAIL) = 'o' then    -- AVEC DETAIL 
+            ecr ('##H;BU;CLIENT;COMMERCIAL;Num_aff°; OTP ;AFFAIRE;TYPE PRODUIT;VEHICULE ;ID;Num lanc;Num EOTP;Designation ;Chrono ;Type G   ;Gestionnaire ;SOP(DMS);Qte prev ; Part amo  ; AMO CACHé;MONTANT A AMORTIR ;DUREE PREVUE ; DATE DEBUT REELLE  ;  RESTE A AMORTIR   ;  MONTANT AMORTI APRES RENGO ; RETARD COMBLE ;  SURPLUS REPORT;  RESTE A AMORTIR APRES RENEGO');
+            ecr('CRLF');
+     ELSIF TRIM(P_DETAIL) = 'N' OR TRIM(P_DETAIL) = 'n' THEN --SANS DETAIL
+            ecr ('##H;BU;CLIENT;COMMERCIAL;Num_aff°; OTP ;AFFAIRE;TYPE PRODUIT;VEHICULE  ;Gestionnaire ;SOP(DMS)  ; AMO CACHé;MONTANT A AMORTIR ;DUREE PREVUE ; DATE DEBUT REELLE  ;  RESTE A AMORTIR   ; MONTANT AMORTI APRES RENGO ; RETARD COMBLE ;  SURPLUS REPORT;  RESTE A AMORTIR APRES RENEGO');
+            ecr('CRLF');
+     END IF ;
 
 
 
 
                  ecr ('##L'); -- LONGEUR DES COLONNES
-                 
                  ecr ('25');  -- Longeur  BU            ( 1 )
                  ecr ('25');  -- Longeur  CLIENT        ( 2 )
                  ecr ('25');  -- Longeur  CCOMMERCIAL   ( 3 )
@@ -324,17 +329,22 @@ Begin
                  ecr ('70'); -- Longeur  AFFAIRE        ( 6 )
                  ecr ('20'); -- TYPE PRODUIT            ( 7 )
                  ecr ('20'); -- VEHICULE                ( 8 )
-                              
-                 ecr ('20'); -- Longeur  ID             ( 9 )
-                 ecr ('20'); -- Longeur  Num lanc       ( 10)
-                 ecr ('20'); -- Longeur  Num EOTP       ( 11)
-                 ecr ('20'); -- Longeur  Designation    ( 12 )
-                 ecr ('20'); -- Longeur  Chrono         ( 13)
-                 ecr ('20'); -- Longeur  Type G         ( 14 )
+                 
+               IF TRIM(P_DETAIL) = 'O' OR TRIM(P_DETAIL) = 'o' then               
+                     ecr ('20'); -- Longeur  ID             ( 9 )
+                     ecr ('20'); -- Longeur  Num lanc       ( 10)
+                     ecr ('20'); -- Longeur  Num EOTP       ( 11)
+                     ecr ('20'); -- Longeur  Designation    ( 12 )
+                     ecr ('20'); -- Longeur  Chrono         ( 13)
+                     ecr ('20'); -- Longeur  Type G         ( 14 )
+                 END IF ;
                  ecr ('20'); -- Longeur  Gestionnaire   ( 15 )
                  ecr ('20'); -- Longeur  SOP            ( 16 )
-                 ecr ('20'); -- Longeur  Qte prev       ( 17 )
-                 ecr ('20'); -- Longeur  Part amo       ( 18 )
+                  IF TRIM(P_DETAIL) = 'O' OR TRIM(P_DETAIL) = 'o' then               
+                         ecr ('20'); -- Longeur  Qte prev       ( 17 )
+                         ecr ('20'); -- Longeur  Part amo       ( 18 )
+                 END IF ;
+
 
                  ecr ('25'); -- Longeur AMO CACHé       ( 19 )
                  ecr ('25'); -- Longeur  MONTANT A AMORTIR              ( 20 )
@@ -360,17 +370,24 @@ Begin
                  ecr ('2'); -- Longeur  AFFAIRE                         ( 6 )
                  ecr ('2'); -- TYPE PRODUIT                             ( 7 )
                  ecr ('2'); -- VEHICULE                                 ( 8 )
+                   IF TRIM(P_DETAIL) = 'O' OR TRIM(P_DETAIL) = 'o' then               
+                             ecr ('2'); -- Longeur  ID                              ( 9 )
+                             ecr ('2'); -- Longeur  Num lanc                        ( 10)
+                             ecr ('2'); -- Longeur  Num EOTP                        ( 11)
+                             ecr ('2'); -- Longeur  Designation                     ( 12 )
+                             ecr ('2'); -- Longeur  Chrono                          ( 13)
+                             ecr ('2'); -- Longeur  Type G                          ( 14 )
+                     END IF ;
 
-                 ecr ('2'); -- Longeur  ID                              ( 9 )
-                 ecr ('2'); -- Longeur  Num lanc                        ( 10)
-                 ecr ('2'); -- Longeur  Num EOTP                        ( 11)
-                 ecr ('2'); -- Longeur  Designation                     ( 12 )
-                 ecr ('2'); -- Longeur  Chrono                          ( 13)
-                 ecr ('2'); -- Longeur  Type G                          ( 14 )
+
                  ecr ('2'); -- Longeur  Gestionnaire                    ( 15 )
                  ecr ('2'); -- Longeur  SOP                             ( 16)
-                 ecr ('2'); -- Longeur  Qte prev                        ( 17 )
-                 ecr ('2'); -- Longeur  Part amo                        ( 18 )
+                 
+                 IF TRIM(P_DETAIL) = 'O' OR TRIM(P_DETAIL) = 'o' then               
+                         ecr ('2'); -- Longeur  Qte prev                        ( 17 )
+                         ecr ('2'); -- Longeur  Part amo                        ( 18 )
+                 END IF ;
+
 
                  ecr ('2'); -- Longeur AMO CACHé                        ( 19 )
                  ecr ('2'); -- Longeur  MONTANT A AMORTIR               ( 20)
@@ -386,7 +403,11 @@ Begin
                  
                  
                 ecr ('##COND'); --on change la couleur de la Cellule de la colonne  10 en  ROUGE RGB('255,0,0') SI EGAL à 'O'
-                ecr ('19');     -- LA COLONNE
+                ecr ( CASE TRIM(P_DETAIL)
+                                                                     WHEN 'O' THEN '19'
+                                                                     WHEN 'N' THEN '11'
+                                                                     ELSE ''  END
+                         );     -- LA COLONNE
                 ecr ('O');      -- LA CONDITION : LA VALEUR DE LA CELLULE DOIT ETRE EGAL à 'O'
                 ecr('255');     -- LA COULEUR EN RGB PAR DEFAULT EN ROUGE
                 ecr('0');       -- LA COULEUR EN RGB PAR DEFAULT EN ROUGE
@@ -395,7 +416,7 @@ Begin
        
      
      
-       --  BRB$FILE.ADD_LINE(Wfile2 , GenerateQuery('N' ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G ) || '      UNION      ' || GenerateQuery('O' ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G ) ||'       ORDER  BY BU , CLIENT , commercial , affaire , OTP , designation ,TYPE_PRODUIT , VEHICULE , DATE_DMS , TYPE'  );
+         BRB$FILE.ADD_LINE(Wfile2 , GenerateQuery('N' ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G ) || '      UNION      ' || GenerateQuery('O' ,P_AFFAIRE ,P_BU,P_CLIENT , P_TYPE_G ) ||'       ORDER  BY BU , CLIENT , commercial , affaire , OTP , designation ,TYPE_PRODUIT , VEHICULE , DATE_DMS , TYPE'  );
 
             
          
@@ -405,230 +426,234 @@ Begin
                                   LOOP
                                        fetch c1 into v_row ;
                                            EXIT WHEN c1%NOTFOUND ;                                            
-                                           IF PVL_STRCMP(  P_DETAIL    ,'O') = 1 THEN                
-                                                    IF PVL_STRCMP(v_row.affaire,'2006/00471') = 1 THEN                                                    
-                                                          v_n_ligne := v_n_ligne + 1 ;       
-                                                    END IF ;                                                                                       
-                                                    IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN                                                    
-                                                            ecr('##R'                              );
-                                                    ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN
-                                                            ecr ('##TOTAL');
-                                                    END IF ;
-                                                    ecr(v_row.bu                           );
-                                                    ecr(v_row.client                       );
-                                                    ecr(v_row.commercial                   );
-                                                    ecr(v_row.affaire                      );
-                                                    ecr(v_row.OTP                          );
-                                                    ecr( v_row.designation                 );
-                                                    ecr( v_row.TYPE_PRODUIT                );
-                                                    ecr( v_row.VEHICULE                    );
-                                                    ecr( v_row.ID                          );
-                                                    ecr( v_row.num_lancement_plm           );
-                                                    ecr( v_row.EOTP                        );
-                                                    ecr( v_row.l_Designation               );
-                                                    ecr( v_row.num_chrono                  );
-                                                    ecr( v_row.type_g                      );
-                                                    ecr( v_row.Gestionnaire                );
-                                                    ecr( v_row.DATE_DMS                    );
-                                                    ecr( v_row.Qte_prev                    );
-                                                    ecr( v_row.Part_amo                    );
-                                                    ecr(v_row.amo_cache                    );
-                                                    ecr(v_row.vente_a_amortir              );
-                                                    ecr(v_row.nombre_mois                  );
-                                                    ecr(v_row.date_deb_amo_reel            );
-                                                    ecr(v_row.reste_a_amortir              );
-                                                    ecr(v_row.vente_amortie_apres_reneg    );
-                                                    ecr(v_row.REATRD_COMBLE                );
-                                                    ecr(v_row. SURPLUS_REPORT              );        
-                                                    ecr(v_row.reste_a_amortir_apres_reneg  );                                                                                 
-                                                    ecr('CRLF');
-                                         ELSIF PVL_STRCMP(  P_DETAIL    ,'N') = 1 THEN
-                                                IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN                                                    
-                                                       IF    PVL_STRCMP( v_row.amo_cache,'N') = 1 THEN 
-                                                             IF v_row2.TYPE  IS NULL THEN 
-                                                                v_row2 := v_row;
-                                                             ELSE
-                                                                v_row2.vente_a_amortir  :=  v_row2.vente_a_amortir +  v_row.vente_a_amortir ;
-                                                                v_row2.reste_a_amortir    :=  v_row2.reste_a_amortir   +  v_row.reste_a_amortir    ;
-                                                                v_row2.vente_amortie_apres_reneg   :=  v_row2.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
-                                                                v_row2.REATRD_COMBLE  :=  v_row2.REATRD_COMBLE +  v_row.REATRD_COMBLE;
-                                                                v_row2.SURPLUS_REPORT  :=  v_row2.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
-                                                                v_row2.reste_a_amortir_apres_reneg :=  v_row2.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
-                                                             END IF ;                                                                                        
-                                                       ELSIF PVL_STRCMP( v_row.amo_cache,'O') = 1 THEN
-                                                           IF v_row3.TYPE  IS NULL THEN 
-                                                                v_row3 := v_row;
-                                                           ELSE
-                                                                v_row3.vente_a_amortir  :=  v_row3.vente_a_amortir +  v_row.vente_a_amortir ;
-                                                                v_row3.reste_a_amortir    :=  v_row3.reste_a_amortir   +  v_row.reste_a_amortir    ;
-                                                                v_row3.vente_amortie_apres_reneg   :=  v_row3.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
-                                                                v_row3.REATRD_COMBLE  :=  v_row3.REATRD_COMBLE +  v_row.REATRD_COMBLE;
-                                                                v_row3.SURPLUS_REPORT  :=  v_row3.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
-                                                                v_row3.reste_a_amortir_apres_reneg :=  v_row3.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
-                                                           END IF ;                                                                       
-                                                       END IF;                                 
-                                                ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN                           
-                                                        IF (v_row2.TYPE IS NOT NULL ) AND (v_row3.TYPE IS NOT NULL) THEN
-                                                                  ecr ('##R');
-                                                                  ecr(v_row2.bu                           );
-                                                                  ecr(v_row2.client                       );
-                                                                  ecr(v_row2.commercial                   );
-                                                                  ecr(v_row2.affaire                      );
-                                                                  ecr(v_row2.OTP                          );
-                                                                  ecr( v_row2.designation                 );
-                                                                  ecr( v_row2.TYPE_PRODUIT                );
-                                                                  ecr( v_row2.VEHICULE                    );
-                                                                  ecr( v_row2.ID                          );
-                                                                  ecr( v_row2.num_lancement_plm           );
-                                                                  ecr( v_row2.EOTP                        );
-                                                                  ecr( v_row2.l_Designation               );
-                                                                  ecr( v_row2.num_chrono                  );
-                                                                  ecr( v_row2.type_g                      );
-                                                                  ecr( v_row2.Gestionnaire                );
-                                                                  ecr( v_row2.DATE_DMS                    );
-                                                                  ecr( v_row2.Qte_prev                    );
-                                                                  ecr( v_row2.Part_amo                    );
-                                                                  ecr(v_row2.amo_cache                    );
-                                                                  ecr(v_row2.vente_a_amortir              );
-                                                                  ecr(v_row2.nombre_mois                  );
-                                                                  ecr(v_row2.date_deb_amo_reel            );
-                                                                  ecr(v_row2.reste_a_amortir              );
-                                                                  ecr(v_row2.vente_amortie_apres_reneg    );
-                                                                  ecr(v_row2.REATRD_COMBLE                );
-                                                                  ecr(v_row2. SURPLUS_REPORT              );        
-                                                                  ecr(v_row2.reste_a_amortir_apres_reneg  );
-                                                                  ecr('CRLF'                              );                
-                                                                                                
-                                                                  ecr ('##R'                              );
-                                                                  ecr(v_row3.bu                           );
-                                                                  ecr(v_row3.client                       );
-                                                                  ecr(v_row3.commercial                   );
-                                                                  ecr(v_row3.affaire                      );
-                                                                  ecr(v_row3.OTP                          );
-                                                                  ecr( v_row3.designation                 );
-                                                                  ecr( v_row3.TYPE_PRODUIT                );
-                                                                  ecr( v_row3.VEHICULE                    );
-                                                                  ecr( v_row3.ID                          );
-                                                                  ecr( v_row3.num_lancement_plm           );
-                                                                  ecr( v_row3.EOTP                        );
-                                                                  ecr( v_row3.l_Designation               );
-                                                                  ecr( v_row3.num_chrono                  );
-                                                                  ecr( v_row3.type_g                      );
-                                                                  ecr( v_row3.Gestionnaire                );
-                                                                  ecr( v_row3.DATE_DMS                    );
-                                                                  ecr( v_row3.Qte_prev                    );
-                                                                  ecr( v_row3.Part_amo                    );
-                                                                  ecr(v_row3.amo_cache                    );
-                                                                  ecr(v_row3.vente_a_amortir              );
-                                                                  ecr(v_row3.nombre_mois                  );
-                                                                  ecr(v_row3.date_deb_amo_reel            );
-                                                                  ecr(v_row3.reste_a_amortir              );
-                                                                  ecr(v_row3.vente_amortie_apres_reneg    );
-                                                                  ecr(v_row3.REATRD_COMBLE                );
-                                                                  ecr(v_row3. SURPLUS_REPORT              );        
-                                                                  ecr(v_row3.reste_a_amortir_apres_reneg  );
-                                                                  ecr('CRLF'                              );                                                   
-                                                                  ecr ('##TOTAL'                          );
-                                                                  ecr(v_row.bu                            );
-                                                                  ecr(v_row.client                        );
-                                                                  ecr(v_row.commercial                    );
-                                                                  ecr(v_row.affaire                       );
-                                                                  ecr(v_row.OTP                           );
-                                                                  ecr( v_row.designation                  );
-                                                                  ecr( v_row.TYPE_PRODUIT                 );
-                                                                  ecr( v_row.VEHICULE                     );
-                                                                  ecr( v_row.ID                           );
-                                                                  ecr( v_row.num_lancement_plm            );
-                                                                  ecr( v_row.EOTP                         );
-                                                                  ecr( v_row.l_Designation                );
-                                                                  ecr( v_row.num_chrono                   );
-                                                                  ecr( v_row.type_g                       );
-                                                                  ecr( v_row.Gestionnaire                 );
-                                                                  ecr( v_row.DATE_DMS                     );
-                                                                  ecr( v_row.Qte_prev                     );
-                                                                  ecr( v_row.Part_amo                     );
-                                                                  ecr(v_row.amo_cache                     );
-                                                                  ecr(v_row.vente_a_amortir               );
-                                                                  ecr(v_row.nombre_mois                   );
-                                                                  ecr(v_row.date_deb_amo_reel             );
-                                                                  ecr(v_row.reste_a_amortir               );
-                                                                  ecr(v_row.vente_amortie_apres_reneg     );
-                                                                  ecr(v_row.REATRD_COMBLE                 );
-                                                                  ecr(v_row. SURPLUS_REPORT               );        
-                                                                  ecr(v_row.reste_a_amortir_apres_reneg   );
-                                                              ecr('CRLF');                                                                                                                   
-                                                        ELSE
-                                                            IF v_row3.TYPE IS NOT NULL THEN 
-                                                                  ecr ('##R');
-                                                                  ecr(v_row3.bu                           );
-                                                                  ecr(v_row3.client                       );
-                                                                  ecr(v_row3.commercial                   );
-                                                                  ecr(v_row3.affaire                      );
-                                                                  ecr(v_row3.OTP                          );
-                                                                  ecr( v_row3.designation                 );
-                                                                  ecr( v_row3.TYPE_PRODUIT                );
-                                                                  ecr( v_row3.VEHICULE                    );
-                                                                  ecr( v_row3.ID                          );
-                                                                  ecr( v_row3.num_lancement_plm           );
-                                                                  ecr( v_row3.EOTP                        );
-                                                                  ecr( v_row3.l_Designation               );
-                                                                  ecr( v_row3.num_chrono                  );
-                                                                  ecr( v_row3.type_g                      );
-                                                                  ecr( v_row3.Gestionnaire                );
-                                                                  ecr( v_row3.DATE_DMS                    );
-                                                                  ecr( v_row3.Qte_prev                    );
-                                                                  ecr( v_row3.Part_amo                    );
-                                                                  ecr(v_row3.amo_cache                    );
-                                                                  ecr(v_row3.vente_a_amortir              );
-                                                                  ecr(v_row3.nombre_mois                  );
-                                                                  ecr(v_row3.date_deb_amo_reel            );
-                                                                  ecr(v_row3.reste_a_amortir              );
-                                                                  ecr(v_row3.vente_amortie_apres_reneg    );
-                                                                  ecr(v_row3.REATRD_COMBLE                );
-                                                                  ecr(v_row3. SURPLUS_REPORT              );        
-                                                                  ecr(v_row3.reste_a_amortir_apres_reneg  );
-                                                                  ecr('CRLF');  
-                                                            END IF ;
-                                                                                                                   
-                                                            IF (v_row2.TYPE IS NOT NULL )  THEN                                                  
-                                                                      ecr ('##R');
-                                                                      ecr(v_row2.bu                           );
-                                                                      ecr(v_row2.client                       );
-                                                                      ecr(v_row2.commercial                   );
-                                                                      ecr(v_row2.affaire                      );
-                                                                      ecr(v_row2.OTP                          );
-                                                                      ecr( v_row2.designation                 );
-                                                                      ecr( v_row2.TYPE_PRODUIT                );
-                                                                      ecr( v_row2.VEHICULE                    );
-                                                                      ecr( v_row2.ID                          );
-                                                                      ecr( v_row2.num_lancement_plm           );
-                                                                      ecr( v_row2.EOTP                        );
-                                                                      ecr( v_row2.l_Designation               );
-                                                                      ecr( v_row2.num_chrono                  );
-                                                                      ecr( v_row2.type_g                      );
-                                                                      ecr( v_row2.Gestionnaire                );
-                                                                      ecr( v_row2.DATE_DMS                    );
-                                                                      ecr( v_row2.Qte_prev                    );
-                                                                      ecr( v_row2.Part_amo                    );
-                                                                      ecr(v_row2.amo_cache                    );
-                                                                      ecr(v_row2.vente_a_amortir              );
-                                                                      ecr(v_row2.nombre_mois                  );
-                                                                      ecr(v_row2.date_deb_amo_reel            );
-                                                                      ecr(v_row2.reste_a_amortir              );
-                                                                      ecr(v_row2.vente_amortie_apres_reneg    );
-                                                                      ecr(v_row2.REATRD_COMBLE                );
-                                                                      ecr(v_row2. SURPLUS_REPORT              );        
-                                                                      ecr(v_row2.reste_a_amortir_apres_reneg  );
-                                                                      ecr('CRLF');
-                                                            END IF;
-                                                        END IF ;                            
-                                                        v_row2.TYPE := NULL;
-                                                        v_row3.TYPE := NULL;
-                                                END IF ;                                                
-                                           END IF ;                                    
+                                                        IF PVL_STRCMP(  P_DETAIL    ,'O') = 1 THEN                                                                   
+                                                                    IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN                                                    
+                                                                            ecr('##R'                              );
+                                                                    ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN
+                                                                            ecr ('##TOTAL');
+                                                                            v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
+                                                                            v_SUM.reste_a_amortir                            :=  nvl(v_SUM.reste_a_amortir,0)   +  nvl(v_row.reste_a_amortir,0)    ;
+                                                                            v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
+                                                                            v_SUM.REATRD_COMBLE                          :=  nvl(v_SUM.REATRD_COMBLE,0) +  nvl(v_row.REATRD_COMBLE,0) ;
+                                                                            v_SUM.SURPLUS_REPORT                         :=  nvl(v_SUM.SURPLUS_REPORT,0) +  nvl(v_row.SURPLUS_REPORT,0) ;
+                                                                            v_SUM.reste_a_amortir_apres_reneg :=  nvl(v_SUM.reste_a_amortir_apres_reneg,0) +  nvl(v_row.reste_a_amortir_apres_reneg,0) ;
+                                                                    END IF ;
+                                                                    ecr(v_row.bu                           );
+                                                                    ecr(v_row.client                       );
+                                                                    ecr(v_row.commercial                   );
+                                                                    ecr(v_row.affaire                      );
+                                                                    ecr(v_row.OTP                          );
+                                                                    ecr( v_row.designation                 );
+                                                                    ecr( v_row.TYPE_PRODUIT                );
+                                                                    ecr( v_row.VEHICULE                    );
+                                                                    ecr( v_row.ID                          );
+                                                                    ecr( v_row.num_lancement_plm           );
+                                                                    ecr( v_row.EOTP                        );
+                                                                    ecr( v_row.l_Designation               );
+                                                                    ecr( v_row.num_chrono                  );
+                                                                    ecr( v_row.type_g                      );
+                                                                    ecr( v_row.Gestionnaire                );
+                                                                    ecr( v_row.DATE_DMS                    );
+                                                                    ecr( v_row.Qte_prev                    );
+                                                                    ecr( v_row.Part_amo                    );
+                                                                    ecr(v_row.amo_cache                    );
+                                                                    ecr(v_row.vente_a_amortir              );
+                                                                    ecr(v_row.nombre_mois                  );
+                                                                    ecr(v_row.date_deb_amo_reel            );
+                                                                    ecr(v_row.reste_a_amortir              );
+                                                                    ecr(v_row.vente_amortie_apres_reneg    );
+                                                                    ecr(v_row.REATRD_COMBLE                );
+                                                                    ecr(v_row. SURPLUS_REPORT              );        
+                                                                    ecr(v_row.reste_a_amortir_apres_reneg  );                                                                                 
+                                                                    ecr('CRLF');
+                                                       ELSIF PVL_STRCMP(  P_DETAIL    ,'N') = 1 THEN
+                                                                      IF PVL_STRCMP(v_row.TYPE,'DET') = 1 THEN  
+                                                                                    IF    PVL_STRCMP( v_row.amo_cache,'N') = 1 THEN 
+                                                                                                     IF v_row2.TYPE  IS NULL THEN 
+                                                                                                        v_row2 := v_row;
+                                                                                                     ELSE
+                                                                                                        v_row2.vente_a_amortir  :=  v_row2.vente_a_amortir +  v_row.vente_a_amortir ;
+                                                                                                        v_row2.reste_a_amortir    :=  v_row2.reste_a_amortir   +  v_row.reste_a_amortir    ;
+                                                                                                        v_row2.vente_amortie_apres_reneg   :=  v_row2.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
+                                                                                                        v_row2.REATRD_COMBLE  :=  v_row2.REATRD_COMBLE +  v_row.REATRD_COMBLE;
+                                                                                                        v_row2.SURPLUS_REPORT  :=  v_row2.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
+                                                                                                        v_row2.reste_a_amortir_apres_reneg :=  v_row2.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
+                                                                                                     END IF ; 
+                                                                                                     
+                                                                                                    v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0)                           +  nvl(v_row.vente_a_amortir,0) ;
+                                                                                                    v_SUM.reste_a_amortir                            :=  v_SUM.reste_a_amortir                             +  nvl(v_row.reste_a_amortir,0) ;
+                                                                                                    v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)   +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
+                                                                                                    v_SUM.REATRD_COMBLE                          :=  nvl(v_SUM.REATRD_COMBLE,0)                          +  nvl(v_row.REATRD_COMBLE,0) ;
+                                                                                                    v_SUM.SURPLUS_REPORT                         :=  nvl(v_SUM.SURPLUS_REPORT,0)                         +  nvl(v_row.SURPLUS_REPORT,0) ;
+                                                                                                    v_SUM.reste_a_amortir_apres_reneg :=  nvl(v_SUM.reste_a_amortir_apres_reneg,0) +  nvl(v_row.reste_a_amortir_apres_reneg,0) ;                                                                                       
+                                                                                   ELSIF PVL_STRCMP( v_row.amo_cache,'O') = 1 THEN
+                                                                                                       IF v_row3.TYPE  IS NULL THEN 
+                                                                                                            v_row3 := v_row;
+                                                                                                       ELSE
+                                                                                                            v_row3.vente_a_amortir  :=  v_row3.vente_a_amortir +  v_row.vente_a_amortir ;
+                                                                                                            v_row3.reste_a_amortir    :=  v_row3.reste_a_amortir   +  v_row.reste_a_amortir    ;
+                                                                                                            v_row3.vente_amortie_apres_reneg   :=  v_row3.vente_amortie_apres_reneg  +  v_row.vente_amortie_apres_reneg  ;
+                                                                                                            v_row3.REATRD_COMBLE  :=  v_row3.REATRD_COMBLE +  v_row.REATRD_COMBLE;
+                                                                                                            v_row3.SURPLUS_REPORT  :=  v_row3.SURPLUS_REPORT+  v_row.SURPLUS_REPORT ;
+                                                                                                            v_row3.reste_a_amortir_apres_reneg :=  v_row3.reste_a_amortir_apres_reneg +  v_row.reste_a_amortir_apres_reneg ;
+                                                                                                       END IF ;              
+                                                                                                    v_SUM.vente_a_amortir                           :=  nvl(v_SUM.vente_a_amortir,0) +  nvl(v_row.vente_a_amortir,0) ;
+                                                                                                    v_SUM.reste_a_amortir                            :=  v_SUM.reste_a_amortir   +  nvl(v_row.reste_a_amortir,0)    ;
+                                                                                                    v_SUM.vente_amortie_apres_reneg   :=  nvl(v_SUM.vente_amortie_apres_reneg,0)  +  nvl(v_row.vente_amortie_apres_reneg,0)  ;
+                                                                                                    v_SUM.REATRD_COMBLE                          :=  nvl(v_SUM.REATRD_COMBLE,0) +  nvl(v_row.REATRD_COMBLE,0) ;
+                                                                                                    v_SUM.SURPLUS_REPORT                         :=  nvl(v_SUM.SURPLUS_REPORT,0) +  nvl(v_row.SURPLUS_REPORT,0) ;
+                                                                                                    v_SUM.reste_a_amortir_apres_reneg :=  nvl(v_SUM.reste_a_amortir_apres_reneg,0) +  nvl(v_row.reste_a_amortir_apres_reneg,0) ;                                                             
+                                                                                   END IF;                                 
+                                                                      ELSIF PVL_STRCMP(v_row.TYPE,'TOT') = 1 THEN    
+                                                                                    IF (v_row2.TYPE IS NOT NULL ) AND (v_row3.TYPE IS NOT NULL) THEN
+                                                                                              ecr ('##R');
+                                                                                              ecr(v_row2.bu                           );
+                                                                                              ecr(v_row2.client                       );
+                                                                                              ecr(v_row2.commercial                   );
+                                                                                              ecr(v_row2.affaire                      );
+                                                                                              ecr(v_row2.OTP                          );
+                                                                                              ecr( v_row2.designation                 );
+                                                                                              ecr( v_row2.TYPE_PRODUIT                );
+                                                                                              ecr( v_row2.VEHICULE                    );
+                                                                                              ecr( v_row2.Gestionnaire                );
+                                                                                              ecr( v_row2.DATE_DMS                    );
+                                                                                              ecr(v_row2.amo_cache                    );
+                                                                                              ecr(v_row2.vente_a_amortir              );
+                                                                                              ecr(v_row2.nombre_mois                  );
+                                                                                              ecr(v_row2.date_deb_amo_reel            );
+                                                                                              ecr(v_row2.reste_a_amortir              );
+                                                                                              ecr(v_row2.vente_amortie_apres_reneg    );
+                                                                                              ecr(v_row2.REATRD_COMBLE                );
+                                                                                              ecr(v_row2. SURPLUS_REPORT              );        
+                                                                                              ecr(v_row2.reste_a_amortir_apres_reneg  );
+                                                                                              ecr('CRLF'                              );                
+                                                                                                                            
+                                                                                              ecr ('##R'                              );
+                                                                                              ecr(v_row3.bu                           );
+                                                                                              ecr(v_row3.client                       );
+                                                                                              ecr(v_row3.commercial                   );
+                                                                                              ecr(v_row3.affaire                      );
+                                                                                              ecr(v_row3.OTP                          );
+                                                                                              ecr( v_row3.designation                 );
+                                                                                              ecr( v_row3.TYPE_PRODUIT                );
+                                                                                              ecr( v_row3.VEHICULE                    );
+                                                                                              ecr( v_row3.Gestionnaire                );
+                                                                                              ecr( v_row3.DATE_DMS                    );
+                                                                                              ecr(v_row3.amo_cache                    );
+                                                                                              ecr(v_row3.vente_a_amortir              );
+                                                                                              ecr(v_row3.nombre_mois                  );
+                                                                                              ecr(v_row3.date_deb_amo_reel            );
+                                                                                              ecr(v_row3.reste_a_amortir              );
+                                                                                              ecr(v_row3.vente_amortie_apres_reneg    );
+                                                                                              ecr(v_row3.REATRD_COMBLE                );
+                                                                                              ecr(v_row3. SURPLUS_REPORT              );        
+                                                                                              ecr(v_row3.reste_a_amortir_apres_reneg  );
+                                                                                              ecr('CRLF'                              );                                                   
+                                                                                              ecr ('##TOTAL'                          );
+                                                                                              ecr(v_row.bu                            );
+                                                                                              ecr(v_row.client                        );
+                                                                                              ecr(v_row.commercial                    );
+                                                                                              ecr(v_row.affaire                       );
+                                                                                              ecr(v_row.OTP                           );
+                                                                                              ecr( v_row.designation                  );
+                                                                                              ecr( v_row.TYPE_PRODUIT                 );
+                                                                                              ecr( v_row.VEHICULE                     );
+                                                                                              ecr( v_row.Gestionnaire                 );
+                                                                                              ecr( v_row.DATE_DMS                     );
+                                                                                              ecr(v_row.amo_cache                     );
+                                                                                              ecr(v_row.vente_a_amortir               );
+                                                                                              ecr(v_row.nombre_mois                   );
+                                                                                              ecr(v_row.date_deb_amo_reel             );
+                                                                                              ecr(v_row.reste_a_amortir               );
+                                                                                              ecr(v_row.vente_amortie_apres_reneg     );
+                                                                                              ecr(v_row.REATRD_COMBLE                 );
+                                                                                              ecr(v_row. SURPLUS_REPORT               );        
+                                                                                              ecr(v_row.reste_a_amortir_apres_reneg   );
+                                                                                          ecr('CRLF');                                                                                                                   
+                                                                                    ELSE
+                                                                                            IF v_row3.TYPE IS NOT NULL THEN 
+                                                                                                      ecr ('##R');
+                                                                                                      ecr(v_row3.bu                           );
+                                                                                                      ecr(v_row3.client                       );
+                                                                                                      ecr(v_row3.commercial                   );
+                                                                                                      ecr(v_row3.affaire                      );
+                                                                                                      ecr(v_row3.OTP                          );
+                                                                                                      ecr( v_row3.designation                 );
+                                                                                                      ecr( v_row3.TYPE_PRODUIT                );
+                                                                                                      ecr( v_row3.VEHICULE                    );
+                                                                                                      ecr( v_row3.Gestionnaire                );
+                                                                                                      ecr( v_row3.DATE_DMS                    );
+                                                                                                      ecr(v_row3.amo_cache                    );
+                                                                                                      ecr(v_row3.vente_a_amortir              );
+                                                                                                      ecr(v_row3.nombre_mois                  );
+                                                                                                      ecr(v_row3.date_deb_amo_reel            );
+                                                                                                      ecr(v_row3.reste_a_amortir              );
+                                                                                                      ecr(v_row3.vente_amortie_apres_reneg    );
+                                                                                                      ecr(v_row3.REATRD_COMBLE                );
+                                                                                                      ecr(v_row3. SURPLUS_REPORT              );        
+                                                                                                      ecr(v_row3.reste_a_amortir_apres_reneg  );
+                                                                                                      ecr('CRLF');  
+                                                                                                END IF ;
+                                                                                                                                   
+                                                                                                IF (v_row2.TYPE IS NOT NULL )  THEN                                                  
+                                                                                                          ecr ('##R');
+                                                                                                          ecr(v_row2.bu                           );
+                                                                                                          ecr(v_row2.client                       );
+                                                                                                          ecr(v_row2.commercial                   );
+                                                                                                          ecr(v_row2.affaire                      );
+                                                                                                          ecr(v_row2.OTP                          );
+                                                                                                          ecr( v_row2.designation                 );
+                                                                                                          ecr( v_row2.TYPE_PRODUIT                );
+                                                                                                          ecr( v_row2.VEHICULE                    );
+                                                                                                          ecr( v_row2.Gestionnaire                );
+                                                                                                          ecr( v_row2.DATE_DMS                    );
+                                                                                                          ecr(v_row2.amo_cache                    );
+                                                                                                          ecr(v_row2.vente_a_amortir              );
+                                                                                                          ecr(v_row2.nombre_mois                  );
+                                                                                                          ecr(v_row2.date_deb_amo_reel            );
+                                                                                                          ecr(v_row2.reste_a_amortir              );
+                                                                                                          ecr(v_row2.vente_amortie_apres_reneg    );
+                                                                                                          ecr(v_row2.REATRD_COMBLE                );
+                                                                                                          ecr(v_row2. SURPLUS_REPORT              );        
+                                                                                                          ecr(v_row2.reste_a_amortir_apres_reneg  );
+                                                                                                          ecr('CRLF');
+                                                                                                END IF;
+                                                                                    END IF;
+                                                                          v_row2.TYPE := NULL;
+                                                                         v_row3.TYPE := NULL;
+                                                                      END IF;
+
+                                                        END IF;
                                            v_dateHisto := v_row.date_histo ;
                                            v_n_ligne  :=   v_n_ligne + 1 ;
                                       END LOOP;
+                                             
+                                            IF PVL_STRCMP(  P_DETAIL    ,'O') = 1 THEN        
+                                                    ecr ('##SUM'                          );       
+                                                                     ecr( ' ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; '                             );
+                                                                    ecr( v_SUM.Part_amo                                       );
+                                                                    ecr(' ' );
+                                                                    ecr(v_SUM.vente_a_amortir                         );
+                                                                    ecr(' ;' );
+                                                                    ecr(v_SUM.reste_a_amortir                             );
+                                                                    ecr(v_SUM.vente_amortie_apres_reneg    );
+                                                                    ecr(v_SUM.REATRD_COMBLE                          );
+                                                                    ecr(v_SUM. SURPLUS_REPORT                         );        
+                                                                    ecr(v_SUM.reste_a_amortir_apres_reneg  );                                                                                 
+                                                                    ecr('CRLF');                           
+                                           ELSIF PVL_STRCMP(  P_DETAIL    ,'N') = 1 THEN        
+                                                    ecr ('##SUM'                          );       
+                                                                     ecr( ' ; ; ; ; ; ; ; ; ; ; '                             );
+                                                                    ecr(v_SUM.vente_a_amortir                         );
+                                                                    ecr(' ; ' );
+                                                                    ecr(v_SUM.reste_a_amortir                             );
+                                                                    ecr(v_SUM.vente_amortie_apres_reneg    );
+                                                                    ecr(v_SUM.REATRD_COMBLE                          );
+                                                                    ecr(v_SUM. SURPLUS_REPORT                         );        
+                                                                    ecr(v_SUM.reste_a_amortir_apres_reneg  );                                                                                 
+                                                                    ecr('CRLF');                           
+                                             END IF ;
+                                           
                               close c1;   
                         exception When others Then                                        
                             ecr ('==========================================================================================================================');
